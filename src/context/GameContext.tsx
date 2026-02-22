@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useCallback } from 'react';
+import React, { createContext, useContext, useReducer } from 'react';
 import { Role, getRoleById } from '@/data/roles';
 
 export type GamePhase = 'lobby' | 'role-selection' | 'role-assignment' | 'night' | 'day' | 'victory';
@@ -10,6 +10,7 @@ export interface Player {
   role?: Role;
   alive: boolean;
   votedOut?: boolean;
+  hasVotingRights?: boolean;
 }
 
 export interface GameEvent {
@@ -58,7 +59,7 @@ type Action =
   | { type: 'RESOLVE_NIGHT' }
   | { type: 'CAST_VOTE'; voterId: number; targetId: number }
   | { type: 'RESOLVE_VOTES' }
-  | { type: 'ELIMINATE_PLAYER'; playerId: number }
+  | { type: 'ELIMINATE_PLAYER'; playerId: number; method: 'vote' | 'night' | 'shoot' }
   | { type: 'ADD_EVENT'; event: GameEvent }
   | { type: 'CHECK_VICTORY' }
   | { type: 'NEXT_ROUND' }
@@ -111,7 +112,7 @@ function gameReducer(state: GameState, action: Action): GameState {
       return { ...state, players: action.players };
     case 'ADD_PLAYER': {
       const id = state.players.length > 0 ? Math.max(...state.players.map(p => p.id)) + 1 : 1;
-      return { ...state, players: [...state.players, { id, name: action.name, alive: true }] };
+      return { ...state, players: [...state.players, { id, name: action.name, alive: true, hasVotingRights: true }] };
     }
     case 'REMOVE_PLAYER':
       return { ...state, players: state.players.filter(p => p.id !== action.id) };
@@ -143,17 +144,28 @@ function gameReducer(state: GameState, action: Action): GameState {
       return { ...state, selectedRoles: { ...action.roles } };
     case 'ASSIGN_ROLES': {
       const roleList: Role[] = [];
+      let missingRoles = 0;
       for (const [roleId, count] of Object.entries(state.selectedRoles)) {
         const role = getRoleById(roleId);
         if (role) {
           for (let i = 0; i < count; i++) roleList.push(role);
         }
       }
+      
+      // Fallback if UI somehow passes fewer roles than players
+      missingRoles = state.players.length - roleList.length;
+      if (missingRoles > 0) {
+        const villager = getRoleById('villager')!;
+        for (let i = 0; i < missingRoles; i++) roleList.push(villager);
+      }
+
       const shuffled = shuffleArray(roleList);
       const players = state.players.map((p, i) => ({
         ...p,
         role: shuffled[i],
         alive: true,
+        hasVotingRights: true,
+        votedOut: false,
       }));
       return { ...state, players, currentPlayerIndex: 0, phase: 'role-assignment' };
     }
@@ -164,7 +176,7 @@ function gameReducer(state: GameState, action: Action): GameState {
     case 'ADD_NIGHT_ACTION':
       return { ...state, nightActions: [...state.nightActions, action.action] };
     case 'RESOLVE_NIGHT': {
-      const wolfAction = state.nightActions.find(a => a.roleId === 'werewolf');
+      const wolfAction = state.nightActions.find(a => a.roleId === 'werewolf' || a.roleId === 'white-wolf');
       const guardAction = state.nightActions.find(a => a.roleId === 'guard');
       const witchHeal = state.nightActions.find(a => a.roleId === 'witch' && a.action === 'heal');
       const witchPoison = state.nightActions.find(a => a.roleId === 'witch' && a.action === 'poison');
@@ -176,14 +188,16 @@ function gameReducer(state: GameState, action: Action): GameState {
       if (wolfAction?.targetId) {
         const isGuarded = guardAction?.targetId === wolfAction.targetId;
         const isHealed = witchHeal?.targetId === wolfAction.targetId;
-        if (isHealed) usedHeal = true;
+        if (witchHeal) usedHeal = true;
         if (!isGuarded && !isHealed) {
           eliminated.push(wolfAction.targetId);
         }
       }
 
       if (witchPoison?.targetId) {
-        eliminated.push(witchPoison.targetId);
+        if (!eliminated.includes(witchPoison.targetId)) {
+          eliminated.push(witchPoison.targetId);
+        }
         usedPoison = true;
       }
 
@@ -225,10 +239,11 @@ function gameReducer(state: GameState, action: Action): GameState {
       let eliminatedId: number | null = null;
       let tie = false;
       
-      Object.entries(tally).forEach(([id, count]) => {
+      Object.entries(tally).forEach(([idStr, count]) => {
+        const id = parseInt(idStr);
         if (count > maxVotes) {
           maxVotes = count;
-          eliminatedId = parseInt(id);
+          eliminatedId = id;
           tie = false;
         } else if (count === maxVotes) {
           tie = true;
@@ -238,9 +253,16 @@ function gameReducer(state: GameState, action: Action): GameState {
       const events = [...state.events];
       let players = [...state.players];
       if (eliminatedId !== null && !tie) {
-        players = players.map(p => p.id === eliminatedId ? { ...p, alive: false, votedOut: true } : p);
-        const name = players.find(p => p.id === eliminatedId)?.name;
-        events.push({ phase: 'day', round: state.round, description: `${name} was voted out.` });
+        const targetPlayer = players.find(p => p.id === eliminatedId);
+        if (targetPlayer?.role?.id === 'idiot') {
+          // Idiot survives but loses voting rights
+          players = players.map(p => p.id === eliminatedId ? { ...p, hasVotingRights: false } : p);
+          events.push({ phase: 'day', round: state.round, description: `${targetPlayer.name} was voted out, but revealed as the Idiot and survived (lost voting rights).` });
+        } else {
+          players = players.map(p => p.id === eliminatedId ? { ...p, alive: false, votedOut: true } : p);
+          const name = targetPlayer?.name;
+          events.push({ phase: 'day', round: state.round, description: `${name} was voted out.` });
+        }
       } else {
         events.push({ phase: 'day', round: state.round, description: 'Vote was tied — no one was eliminated.' });
       }
@@ -268,7 +290,8 @@ function gameReducer(state: GameState, action: Action): GameState {
     case 'RESET_GAME':
       return {
         ...initialState,
-        players: state.players.map(p => ({ ...p, role: undefined, alive: true, votedOut: false })),
+        players: state.players.map(p => ({ ...p, role: undefined, alive: true, votedOut: false, hasVotingRights: true })),
+        selectedRoles: state.selectedRoles, // Retain roles for quick restart
       };
     default:
       return state;
