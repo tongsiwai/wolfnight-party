@@ -6,7 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GameProvider } from "@/context/GameContext";
 import Lobby from "./pages/Lobby";
 import RoleSelection from "./pages/RoleSelection";
-import RoleAssignment from "./pages/RoleAssignment";
+import PlayerView from "./pages/PlayerView";
 import NightPhase from "./pages/NightPhase";
 import DayPhase from "./pages/DayPhase";
 import Victory from "./pages/Victory";
@@ -24,7 +24,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Lobby />} />
             <Route path="/roles" element={<RoleSelection />} />
-            <Route path="/assign" element={<RoleAssignment />} />
+            <Route path="/player" element={<PlayerView />} />
             <Route path="/night" element={<NightPhase />} />
             <Route path="/day" element={<DayPhase />} />
             <Route path="/victory" element={<Victory />} />
