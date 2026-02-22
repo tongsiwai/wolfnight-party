@@ -2,15 +2,18 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '@/context/GameContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Users, ArrowRight, Moon, Copy, LogIn } from 'lucide-react';
+import { Trash2, Users, ArrowRight, Moon, Copy, LogIn, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
+
+type LobbyStep = 'name' | 'choose' | 'join-code';
 
 export default function Lobby() {
   const { state, dispatch, isHost, roomCode, createRoom, joinRoom, myPlayerId } = useGame();
   const [name, setName] = useState('');
   const [inputCode, setInputCode] = useState('');
+  const [step, setStep] = useState<LobbyStep>('name');
   const navigate = useNavigate();
 
   const handleCreateRoom = () => {
@@ -18,10 +21,10 @@ export default function Lobby() {
   };
 
   const handleJoinRoom = () => {
-    if (name.trim() && inputCode.trim()) {
+    if (inputCode.trim()) {
       joinRoom(inputCode.trim(), name.trim());
     } else {
-      toast.error('請輸入名稱及房間代碼');
+      toast.error('請輸入房間代碼');
     }
   };
 
@@ -32,7 +35,6 @@ export default function Lobby() {
     }
   };
 
-  // If game already started, redirect
   useEffect(() => {
     if (state.phase !== 'lobby') {
       if (isHost) {
@@ -43,8 +45,8 @@ export default function Lobby() {
     }
   }, [state.phase, isHost, navigate]);
 
-  // View 1: Not in a room yet (Home Screen)
-  if (!roomCode) {
+  // Step 1: Enter name
+  if (!roomCode && step === 'name') {
     return (
       <div className="min-h-screen bg-night-gradient bg-moonlit flex flex-col justify-center px-4">
         <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
@@ -54,30 +56,111 @@ export default function Lobby() {
         </motion.div>
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="max-w-xs mx-auto w-full space-y-6">
-          <div className="space-y-3 p-6 rounded-2xl bg-secondary/50 border border-border">
-            <h2 className="text-lg font-display text-center text-foreground mb-4">加入遊戲</h2>
-            <Input placeholder="你的名稱..." value={name} onChange={e => setName(e.target.value)} maxLength={12} className="bg-background" />
-            <Input placeholder="房間代碼..." value={inputCode} onChange={e => setInputCode(e.target.value.toUpperCase())} className="bg-background uppercase" maxLength={6} />
-            <Button onClick={handleJoinRoom} className="w-full font-display glow-neutral mt-2" size="lg" disabled={!name || !inputCode}>
-              <LogIn className="w-4 h-4 mr-2" /> 加入房間
+          <div className="space-y-4 p-6 rounded-2xl bg-secondary/50 border border-border">
+            <h2 className="text-lg font-display text-center text-foreground">請輸入你的名稱</h2>
+            <Input
+              placeholder="你的名稱..."
+              value={name}
+              onChange={e => setName(e.target.value)}
+              maxLength={12}
+              className="bg-background text-center text-lg"
+              autoFocus
+            />
+            <Button
+              onClick={() => setStep('choose')}
+              className="w-full font-display glow-neutral"
+              size="lg"
+              disabled={!name.trim()}
+            >
+              下一步 <ArrowRight className="w-4 h-4 ml-2" />
             </Button>
           </div>
-
-          <div className="relative flex items-center py-2">
-            <div className="flex-grow border-t border-border"></div>
-            <span className="flex-shrink-0 mx-4 text-muted-foreground text-sm font-display">或</span>
-            <div className="flex-grow border-t border-border"></div>
-          </div>
-
-          <Button onClick={handleCreateRoom} variant="outline" className="w-full font-display border-primary/50 text-primary hover:bg-primary/10" size="lg">
-            建立新房間 (主持)
-          </Button>
         </motion.div>
       </div>
     );
   }
 
-  // View 2: Player joined and waiting
+  // Step 2: Choose create or join
+  if (!roomCode && step === 'choose') {
+    return (
+      <div className="min-h-screen bg-night-gradient bg-moonlit flex flex-col justify-center px-4">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
+          <div className="text-6xl mb-4 animate-float">🐺</div>
+          <h1 className="text-5xl font-display font-bold text-primary tracking-wider mb-2">WolfNight</h1>
+          <p className="text-muted-foreground font-display">歡迎，{name}</p>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="max-w-xs mx-auto w-full space-y-4">
+          <Button
+            onClick={handleCreateRoom}
+            className="w-full h-16 text-lg font-display glow-gold"
+            size="lg"
+          >
+            <Plus className="w-5 h-5 mr-2" /> 開新局 (主持人)
+          </Button>
+
+          <Button
+            onClick={() => setStep('join-code')}
+            variant="outline"
+            className="w-full h-16 text-lg font-display border-primary/50 text-primary hover:bg-primary/10"
+            size="lg"
+          >
+            <LogIn className="w-5 h-5 mr-2" /> 加入已開的局
+          </Button>
+
+          <button
+            onClick={() => setStep('name')}
+            className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors mt-2"
+          >
+            ← 返回
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Step 3: Enter room code to join
+  if (!roomCode && step === 'join-code') {
+    return (
+      <div className="min-h-screen bg-night-gradient bg-moonlit flex flex-col justify-center px-4">
+        <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-12">
+          <div className="text-6xl mb-4 animate-float">🐺</div>
+          <h1 className="text-5xl font-display font-bold text-primary tracking-wider mb-2">WolfNight</h1>
+          <p className="text-muted-foreground font-display">加入遊戲</p>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }} className="max-w-xs mx-auto w-full space-y-6">
+          <div className="space-y-4 p-6 rounded-2xl bg-secondary/50 border border-border">
+            <h2 className="text-lg font-display text-center text-foreground">輸入房間代碼</h2>
+            <Input
+              placeholder="房間代碼..."
+              value={inputCode}
+              onChange={e => setInputCode(e.target.value.toUpperCase())}
+              className="bg-background uppercase text-center text-2xl tracking-widest font-mono"
+              maxLength={6}
+              autoFocus
+            />
+            <Button
+              onClick={handleJoinRoom}
+              className="w-full font-display glow-neutral"
+              size="lg"
+              disabled={!inputCode.trim()}
+            >
+              <LogIn className="w-4 h-4 mr-2" /> 加入房間
+            </Button>
+          </div>
+          <button
+            onClick={() => setStep('choose')}
+            className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← 返回
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Player waiting screen
   if (!isHost) {
     return (
       <div className="min-h-screen bg-night-gradient bg-moonlit flex flex-col items-center justify-center px-4 text-center">
@@ -99,7 +182,7 @@ export default function Lobby() {
     );
   }
 
-  // View 3: Host Lobby
+  // Host Lobby
   const canProceed = state.players.length >= 6;
 
   return (
