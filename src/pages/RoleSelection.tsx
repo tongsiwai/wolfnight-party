@@ -123,13 +123,13 @@ export default function RoleSelection() {
                 />
                 {count > 0 && (
                   <div className="absolute -top-1 -right-1 flex gap-1 z-10">
-                    <button 
+                    <button
                       onClick={(e) => { e.stopPropagation(); handleDecrement(role.id); }}
                       className="w-6 h-6 rounded-full bg-destructive text-white flex items-center justify-center text-lg font-bold shadow-lg hover:scale-110 transition-transform"
                     >
                       −
                     </button>
-                    <button 
+                    <button
                       onClick={(e) => { e.stopPropagation(); handleIncrement(role.id); }}
                       className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-lg font-bold shadow-lg hover:scale-110 transition-transform"
                     >
