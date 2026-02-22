@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '@/context/GameContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Moon, ArrowRight, Skull, Shield, Eye } from 'lucide-react';
+import { Moon, ArrowRight } from 'lucide-react';
 import { useSound } from '@/hooks/use-sound';
 
 interface NightStepDef {
