@@ -105,7 +105,7 @@ export default function DayPhase() {
                 <>
                   <Skull className=\"w-12 h-12 mx-auto text-destructive\" />
                   <div>
-                    <h2 className=\"text-2xl font-display font-bold text-foreground mb-2\">昨晚的犊犲者</h2>
+                    <h2 className=\"text-2xl font-display font-bold text-foreground mb-2\">昨晚的犧牲者</h2>
                     {eliminatedNames.map(name => (
                       <p key={name} className=\"text-xl text-destructive font-bold\">{name}</p>
                     ))}
