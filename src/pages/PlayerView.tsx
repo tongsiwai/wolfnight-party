@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGame } from '@/context/GameContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Lock, Skull, Moon, Sun } from 'lucide-react';
+import { Eye, EyeOff, Lock, Skull, Moon, Sun, Loader2 } from 'lucide-react';
 import { useSound } from '@/hooks/use-sound';
 
 export default function PlayerView() {
@@ -12,15 +12,23 @@ export default function PlayerView() {
   const [revealed, setRevealed] = useState(false);
   const { play } = useSound();
 
-  // Redirect host back to host screens if they end up here accidentally
+  // Redirect host to correct host screen
   useEffect(() => {
     if (isHost) {
       if (state.phase === 'night') navigate('/night');
       else if (state.phase === 'day') navigate('/day');
+      else if (state.phase === 'lobby') navigate('/');
     }
   }, [isHost, state.phase, navigate]);
 
-  // Handle victory redirect
+  // Player: game reset — go back to lobby
+  useEffect(() => {
+    if (!isHost && state.phase === 'lobby') {
+      navigate('/');
+    }
+  }, [isHost, state.phase, navigate]);
+
+  // Player: game ended
   useEffect(() => {
     if (state.phase === 'victory') {
       navigate('/victory');
@@ -29,10 +37,39 @@ export default function PlayerView() {
 
   const me = state.players.find(p => p.id === myPlayerId);
 
+  // ── Still waiting to be accepted by host ─────────────────────────────
   if (!me) {
     return (
-      <div className="min-h-screen bg-night-gradient bg-moonlit flex flex-col items-center justify-center px-4 text-center">
-        <p className="text-muted-foreground">尋找玩家資料中...</p>
+      <div className="min-h-screen bg-night-gradient bg-moonlit flex flex-col items-center justify-center px-4 text-center space-y-4">
+        <Loader2 className="w-10 h-10 text-primary animate-spin" />
+        <h2 className="text-xl font-display font-bold text-foreground">正在連線...</h2>
+        <p className="text-muted-foreground text-sm">等待主持人接受你的加入請求</p>
+      </div>
+    );
+  }
+
+  // ── Accepted but host still selecting roles ───────────────────────────
+  if (!me.role || state.phase === 'role-selection') {
+    return (
+      <div className="min-h-screen bg-night-gradient bg-moonlit flex flex-col items-center justify-center px-4 text-center space-y-6">
+        <motion.div
+          animate={{ rotate: [0, 10, -10, 0] }}
+          transition={{ repeat: Infinity, duration: 2.5 }}
+          className="text-6xl"
+        >
+          🎴
+        </motion.div>
+        <div>
+          <h2 className="text-2xl font-display font-bold text-primary mb-2">
+            你已加入！
+          </h2>
+          <p className="text-muted-foreground text-sm">主持人正在分配角色中...<br />請稍候片刻</p>
+        </div>
+        <div className="px-4 py-2 rounded-full bg-secondary/50 border border-border">
+          <p className="text-xs text-muted-foreground">
+            房間 <span className="font-mono font-bold text-primary">{state.players.length}</span> 位玩家已就緒
+          </p>
+        </div>
       </div>
     );
   }
@@ -96,7 +133,7 @@ export default function PlayerView() {
                     <p className="text-muted-foreground text-sm">請保持安靜，不要影響遊戲進行</p>
                   </div>
                   <Button onClick={handleReveal} variant="outline" className="w-full h-14 text-lg font-display gap-2 mt-6" size="lg">
-                    <Eye className="w-5 h-5" /> 回顧我的角色
+                    <Eye className="w-5 h-5" /> 回顾我的角色
                   </Button>
                 </>
               )}
@@ -114,7 +151,6 @@ export default function PlayerView() {
                     <Skull className="w-32 h-32 text-destructive/20 rotate-12" />
                   </div>
                 )}
-                
                 <span className="text-6xl block mb-4 relative z-20">{role?.emoji}</span>
                 <h2 className={`text-3xl font-display font-bold relative z-20 ${teamColor}`}>
                   {role?.nameCn}
@@ -136,7 +172,7 @@ export default function PlayerView() {
           )}
         </motion.div>
       </AnimatePresence>
-      
+
       {/* Bottom instructions */}
       <div className="absolute bottom-8 left-4 right-4 text-center">
         {state.phase === 'night' ? (
