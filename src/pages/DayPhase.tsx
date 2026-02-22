@@ -4,6 +4,7 @@ import { useGame } from '@/context/GameContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Sun, Skull, Vote, Timer, ArrowRight, Moon } from 'lucide-react';
+import { useSound } from '@/hooks/use-sound';
 
 type DaySubPhase = 'announcement' | 'discussion' | 'voting' | 'results';
 
@@ -16,6 +17,7 @@ export default function DayPhase() {
   const [selectedVote, setSelectedVote] = useState<number | null>(null);
   const [currentVoter, setCurrentVoter] = useState(0);
 
+  const { play } = useSound();
   const alivePlayers = state.players.filter(p => p.alive);
   const eliminatedNames = state.eliminatedLastNight
     .map(id => state.players.find(p => p.id === id)?.name)
@@ -33,7 +35,15 @@ export default function DayPhase() {
   const voters = alivePlayers;
   const currentVoterPlayer = voters[currentVoter];
 
+  // Play elimination sound on announcement
+  useEffect(() => {
+    if (subPhase === 'announcement' && eliminatedNames.length > 0) {
+      play('elimination');
+    }
+  }, [subPhase]);
+
   const handleCastVote = () => {
+    play('vote');
     if (selectedVote !== null && currentVoterPlayer) {
       dispatch({ type: 'CAST_VOTE', voterId: currentVoterPlayer.id, targetId: selectedVote });
     }

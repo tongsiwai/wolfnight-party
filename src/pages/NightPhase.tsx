@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Moon, ArrowRight, Skull, Shield } from 'lucide-react';
 import { roles as allRoles } from '@/data/roles';
+import { useSound } from '@/hooks/use-sound';
 
 interface NightStepDef {
   roleId: string;
@@ -19,6 +20,22 @@ export default function NightPhase() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedTarget, setSelectedTarget] = useState<number | null>(null);
+  const { play } = useSound();
+
+  // Play ambient sounds on mount and wolf howl on wolf step
+  useEffect(() => {
+    play('night-ambient');
+    play('crickets');
+  }, []);
+
+  useEffect(() => {
+    const step = nightSteps[currentStep];
+    if (step?.roleId === 'werewolf') {
+      play('wolf-howl');
+    } else if (step?.roleId === 'all') {
+      play('dawn');
+    }
+  }, [currentStep]);
 
   // Build night steps based on active roles
   const nightSteps: NightStepDef[] = [];
