@@ -1,12 +1,19 @@
+import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useGame } from '@/context/GameContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Trophy, RotateCcw, Home, Skull, Crown } from 'lucide-react';
+import { useSound } from '@/hooks/use-sound';
 
 export default function Victory() {
   const { state, dispatch } = useGame();
   const navigate = useNavigate();
+  const { play } = useSound();
+
+  useEffect(() => {
+    play('victory');
+  }, []);
 
   const winLabel = state.winner === 'wolf' ? '🐺 狼人陣營獲勝！' : state.winner === 'villager' ? '👥 好人陣營獲勝！' : '🎭 第三方獲勝！';
   const winColor = state.winner === 'wolf' ? 'text-wolf' : state.winner === 'villager' ? 'text-villager' : 'text-neutral';

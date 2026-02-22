@@ -4,6 +4,7 @@ import { useGame } from '@/context/GameContext';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Eye, EyeOff, ArrowRight, Lock } from 'lucide-react';
+import { useSound } from '@/hooks/use-sound';
 
 export default function RoleAssignment() {
   const { state, dispatch } = useGame();
@@ -18,7 +19,12 @@ export default function RoleAssignment() {
     return null;
   }
 
-  const handleReveal = () => setRevealed(true);
+  const { play } = useSound();
+
+  const handleReveal = () => {
+    play('card-flip');
+    setRevealed(true);
+  };
 
   const handleConfirm = () => {
     setConfirmed(true);
