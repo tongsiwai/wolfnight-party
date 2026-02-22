@@ -31,6 +31,9 @@ export interface GameState {
   events: GameEvent[];
   winner: WinTeam;
   discussionTime: number; // seconds
+  lastGuardedPlayerId: number | null;
+  usedHealPotion: boolean;
+  usedPoisonPotion: boolean;
 }
 
 export interface NightAction {
@@ -46,7 +49,8 @@ type Action =
   | { type: 'ADD_PLAYER'; name: string }
   | { type: 'REMOVE_PLAYER'; id: number }
   | { type: 'SET_SELECTED_ROLES'; roles: Record<string, number> }
-  | { type: 'TOGGLE_ROLE'; roleId: string }
+  | { type: 'INCREMENT_ROLE'; roleId: string }
+  | { type: 'DECREMENT_ROLE'; roleId: string }
   | { type: 'ASSIGN_ROLES' }
   | { type: 'NEXT_PLAYER' }
   | { type: 'SET_NIGHT_STEP'; step: number }
@@ -75,6 +79,9 @@ const initialState: GameState = {
   events: [],
   winner: null,
   discussionTime: 300,
+  lastGuardedPlayerId: null,
+  usedHealPotion: false,
+  usedPoisonPotion: false,
 };
 
 function shuffleArray<T>(arr: T[]): T[] {
@@ -90,7 +97,7 @@ function checkVictory(players: Player[]): WinTeam {
   const alive = players.filter(p => p.alive);
   const wolves = alive.filter(p => p.role?.team === 'wolf');
   const villagers = alive.filter(p => p.role?.team !== 'wolf');
-
+  
   if (wolves.length === 0) return 'villager';
   if (wolves.length >= villagers.length) return 'wolf';
   return null;
@@ -100,42 +107,40 @@ function gameReducer(state: GameState, action: Action): GameState {
   switch (action.type) {
     case 'SET_PHASE':
       return { ...state, phase: action.phase };
-
     case 'SET_PLAYERS':
       return { ...state, players: action.players };
-
     case 'ADD_PLAYER': {
       const id = state.players.length > 0 ? Math.max(...state.players.map(p => p.id)) + 1 : 1;
       return { ...state, players: [...state.players, { id, name: action.name, alive: true }] };
     }
-
     case 'REMOVE_PLAYER':
       return { ...state, players: state.players.filter(p => p.id !== action.id) };
-
     case 'SET_SELECTED_ROLES':
       return { ...state, selectedRoles: action.roles };
-
-    case 'TOGGLE_ROLE': {
-      const current = state.selectedRoles[action.roleId] || 0;
+    case 'INCREMENT_ROLE': {
       const totalSelected = Object.values(state.selectedRoles).reduce((a, b) => a + b, 0);
-      const newRoles = { ...state.selectedRoles };
-
-      if (current > 0 && totalSelected <= state.players.length) {
-        // Remove or decrement
-        if (current === 1) {
-          delete newRoles[action.roleId];
-        } else {
-          newRoles[action.roleId] = current - 1;
+      if (totalSelected >= state.players.length) return state;
+      return {
+        ...state,
+        selectedRoles: {
+          ...state.selectedRoles,
+          [action.roleId]: (state.selectedRoles[action.roleId] || 0) + 1
         }
-      } else if (totalSelected < state.players.length) {
-        newRoles[action.roleId] = current + 1;
+      };
+    }
+    case 'DECREMENT_ROLE': {
+      const current = state.selectedRoles[action.roleId] || 0;
+      if (current <= 0) return state;
+      const newRoles = { ...state.selectedRoles };
+      if (current === 1) {
+        delete newRoles[action.roleId];
+      } else {
+        newRoles[action.roleId] = current - 1;
       }
       return { ...state, selectedRoles: newRoles };
     }
-
     case 'LOAD_TEMPLATE':
       return { ...state, selectedRoles: { ...action.roles } };
-
     case 'ASSIGN_ROLES': {
       const roleList: Role[] = [];
       for (const [roleId, count] of Object.entries(state.selectedRoles)) {
@@ -152,28 +157,26 @@ function gameReducer(state: GameState, action: Action): GameState {
       }));
       return { ...state, players, currentPlayerIndex: 0, phase: 'role-assignment' };
     }
-
     case 'NEXT_PLAYER':
       return { ...state, currentPlayerIndex: state.currentPlayerIndex + 1 };
-
     case 'SET_NIGHT_STEP':
       return { ...state, nightStep: action.step };
-
     case 'ADD_NIGHT_ACTION':
       return { ...state, nightActions: [...state.nightActions, action.action] };
-
     case 'RESOLVE_NIGHT': {
-      // Simple resolution: find the wolf kill target
-      const wolfAction = state.nightActions.find(a => a.roleId === 'werewolf' || a.action === 'wolf-kill');
+      const wolfAction = state.nightActions.find(a => a.roleId === 'werewolf');
       const guardAction = state.nightActions.find(a => a.roleId === 'guard');
       const witchHeal = state.nightActions.find(a => a.roleId === 'witch' && a.action === 'heal');
       const witchPoison = state.nightActions.find(a => a.roleId === 'witch' && a.action === 'poison');
-
+      
       const eliminated: number[] = [];
+      let usedHeal = state.usedHealPotion;
+      let usedPoison = state.usedPoisonPotion;
 
       if (wolfAction?.targetId) {
         const isGuarded = guardAction?.targetId === wolfAction.targetId;
         const isHealed = witchHeal?.targetId === wolfAction.targetId;
+        if (isHealed) usedHeal = true;
         if (!isGuarded && !isHealed) {
           eliminated.push(wolfAction.targetId);
         }
@@ -181,6 +184,7 @@ function gameReducer(state: GameState, action: Action): GameState {
 
       if (witchPoison?.targetId) {
         eliminated.push(witchPoison.targetId);
+        usedPoison = true;
       }
 
       const players = state.players.map(p => ({
@@ -204,22 +208,23 @@ function gameReducer(state: GameState, action: Action): GameState {
         nightStep: 0,
         events,
         phase: 'day',
+        lastGuardedPlayerId: guardAction?.targetId || null,
+        usedHealPotion: usedHeal,
+        usedPoisonPotion: usedPoison,
       };
     }
-
     case 'CAST_VOTE':
       return { ...state, votes: { ...state.votes, [action.voterId]: action.targetId } };
-
     case 'RESOLVE_VOTES': {
       const tally: Record<number, number> = {};
       Object.values(state.votes).forEach(targetId => {
         tally[targetId] = (tally[targetId] || 0) + 1;
       });
-
+      
       let maxVotes = 0;
       let eliminatedId: number | null = null;
       let tie = false;
-
+      
       Object.entries(tally).forEach(([id, count]) => {
         if (count > maxVotes) {
           maxVotes = count;
@@ -232,7 +237,6 @@ function gameReducer(state: GameState, action: Action): GameState {
 
       const events = [...state.events];
       let players = [...state.players];
-
       if (eliminatedId !== null && !tie) {
         players = players.map(p => p.id === eliminatedId ? { ...p, alive: false, votedOut: true } : p);
         const name = players.find(p => p.id === eliminatedId)?.name;
@@ -243,16 +247,13 @@ function gameReducer(state: GameState, action: Action): GameState {
 
       return { ...state, players, votes: {}, events };
     }
-
     case 'ELIMINATE_PLAYER':
       return {
         ...state,
         players: state.players.map(p => p.id === action.playerId ? { ...p, alive: false } : p),
       };
-
     case 'ADD_EVENT':
       return { ...state, events: [...state.events, action.event] };
-
     case 'CHECK_VICTORY': {
       const winner = checkVictory(state.players);
       if (winner) {
@@ -260,19 +261,15 @@ function gameReducer(state: GameState, action: Action): GameState {
       }
       return state;
     }
-
     case 'NEXT_ROUND':
       return { ...state, round: state.round + 1, phase: 'night', nightStep: 0, nightActions: [], eliminatedLastNight: [] };
-
     case 'SET_DISCUSSION_TIME':
       return { ...state, discussionTime: action.time };
-
     case 'RESET_GAME':
       return {
         ...initialState,
         players: state.players.map(p => ({ ...p, role: undefined, alive: true, votedOut: false })),
       };
-
     default:
       return state;
   }
@@ -287,6 +284,7 @@ const GameContext = createContext<GameContextType | null>(null);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+
   return (
     <GameContext.Provider value={{ state, dispatch }}>
       {children}
