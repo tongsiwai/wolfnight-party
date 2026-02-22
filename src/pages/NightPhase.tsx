@@ -15,7 +15,7 @@ interface NightStepDef {
 }
 
 export default function NightPhase() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, isHost } = useGame();
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedTarget, setSelectedTarget] = useState<number | null>(null);
@@ -24,9 +24,19 @@ export default function NightPhase() {
   const { play } = useSound();
 
   useEffect(() => {
-    play('night-ambient');
-    play('crickets');
-  }, []);
+    if (!isHost) {
+      navigate('/player');
+    }
+  }, [isHost, navigate]);
+
+  useEffect(() => {
+    if (isHost) {
+      play('night-ambient');
+      play('crickets');
+    }
+  }, [isHost]);
+
+  if (!isHost) return null;
 
   // Build night steps based on active roles
   const nightSteps: NightStepDef[] = [];
