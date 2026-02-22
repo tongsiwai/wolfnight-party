@@ -42,7 +42,7 @@ export default function RoleSelection() {
 
   const startGame = () => {
     dispatch({ type: 'ASSIGN_ROLES' });
-    navigate('/assign');
+    navigate('/night'); // Replaced /assign with /night since roles are broadcasted to devices now
   };
 
   const currentTabRoles = tabs.find(t => t.id === activeTab)!.roles;
@@ -123,13 +123,13 @@ export default function RoleSelection() {
                 />
                 {count > 0 && (
                   <div className="absolute -top-1 -right-1 flex gap-1 z-10">
-                    <button
+                    <button 
                       onClick={(e) => { e.stopPropagation(); handleDecrement(role.id); }}
                       className="w-6 h-6 rounded-full bg-destructive text-white flex items-center justify-center text-lg font-bold shadow-lg hover:scale-110 transition-transform"
                     >
                       −
                     </button>
-                    <button
+                    <button 
                       onClick={(e) => { e.stopPropagation(); handleIncrement(role.id); }}
                       className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-lg font-bold shadow-lg hover:scale-110 transition-transform"
                     >
@@ -159,7 +159,7 @@ export default function RoleSelection() {
           className="w-full h-14 text-lg font-display gap-2 glow-gold"
           size="lg"
         >
-          開始分配角色 <ArrowRight className="w-5 h-5" />
+          正式開始 <ArrowRight className="w-5 h-5" />
         </Button>
         {!isValid && totalSelected > 0 && (
           <p className="text-center text-xs text-muted-foreground mt-2">
