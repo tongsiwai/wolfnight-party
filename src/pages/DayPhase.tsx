@@ -9,7 +9,7 @@ import { useSound } from '@/hooks/use-sound';
 type DaySubPhase = 'announcement' | 'discussion' | 'voting' | 'results';
 
 export default function DayPhase() {
-  const { state, dispatch } = useGame();
+  const { state, dispatch, isHost } = useGame();
   const navigate = useNavigate();
   const [subPhase, setSubPhase] = useState<DaySubPhase>('announcement');
   const [timeLeft, setTimeLeft] = useState(state.discussionTime);
@@ -22,6 +22,12 @@ export default function DayPhase() {
   const eliminatedNames = state.eliminatedLastNight
     .map(id => state.players.find(p => p.id === id)?.name)
     .filter(Boolean);
+
+  useEffect(() => {
+    if (!isHost) {
+      navigate('/player');
+    }
+  }, [isHost, navigate]);
 
   // Discussion timer
   useEffect(() => {
@@ -37,10 +43,10 @@ export default function DayPhase() {
 
   // Play elimination sound on announcement
   useEffect(() => {
-    if (subPhase === 'announcement' && eliminatedNames.length > 0) {
+    if (isHost && subPhase === 'announcement' && eliminatedNames.length > 0) {
       play('elimination');
     }
-  }, [subPhase]);
+  }, [subPhase, isHost]);
 
   // Navigate to victory when state changes
   useEffect(() => {
@@ -48,6 +54,8 @@ export default function DayPhase() {
       navigate('/victory');
     }
   }, [state.phase, navigate]);
+
+  if (!isHost) return null;
 
   const handleCastVote = () => {
     play('vote');
