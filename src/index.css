@@ -1,96 +1,61 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 230 30% 8%;
+    --foreground: 210 20% 92%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 230 28% 12%;
+    --card-foreground: 210 20% 92%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 230 28% 12%;
+    --popover-foreground: 210 20% 92%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 45 90% 55%;
+    --primary-foreground: 230 30% 8%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 230 25% 16%;
+    --secondary-foreground: 210 20% 85%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 230 20% 18%;
+    --muted-foreground: 220 15% 55%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 270 45% 50%;
+    --accent-foreground: 210 20% 95%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 210 20% 95%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 230 20% 20%;
+    --input: 230 20% 20%;
+    --ring: 45 90% 55%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    --sidebar-background: 0 0% 98%;
+    /* Game-specific tokens */
+    --wolf: 0 70% 50%;
+    --wolf-glow: 0 80% 40%;
+    --villager: 210 70% 55%;
+    --villager-glow: 210 80% 45%;
+    --neutral: 270 50% 55%;
+    --neutral-glow: 45 85% 55%;
+    --moon: 45 70% 80%;
+    --night-sky: 230 35% 6%;
+    --night-mid: 230 30% 12%;
+    --night-surface: 230 25% 16%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-background: 230 30% 10%;
+    --sidebar-foreground: 210 20% 85%;
+    --sidebar-primary: 45 90% 55%;
+    --sidebar-primary-foreground: 230 30% 8%;
+    --sidebar-accent: 230 25% 16%;
+    --sidebar-accent-foreground: 210 20% 85%;
+    --sidebar-border: 230 20% 20%;
+    --sidebar-ring: 45 90% 55%;
   }
 }
 
@@ -98,8 +63,100 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
     @apply bg-background text-foreground;
+    font-family: 'Noto Sans TC', system-ui, sans-serif;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Cinzel', serif;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Cinzel', serif;
+  }
+  .font-body {
+    font-family: 'Noto Sans TC', system-ui, sans-serif;
+  }
+
+  .text-wolf { color: hsl(var(--wolf)); }
+  .text-villager { color: hsl(var(--villager)); }
+  .text-neutral { color: hsl(var(--neutral)); }
+
+  .bg-wolf { background-color: hsl(var(--wolf)); }
+  .bg-villager { background-color: hsl(var(--villager)); }
+  .bg-neutral { background-color: hsl(var(--neutral)); }
+
+  .border-wolf { border-color: hsl(var(--wolf)); }
+  .border-villager { border-color: hsl(var(--villager)); }
+  .border-neutral { border-color: hsl(var(--neutral)); }
+
+  .glow-wolf {
+    box-shadow: 0 0 20px hsl(var(--wolf) / 0.3), 0 0 60px hsl(var(--wolf) / 0.1);
+  }
+  .glow-villager {
+    box-shadow: 0 0 20px hsl(var(--villager) / 0.3), 0 0 60px hsl(var(--villager) / 0.1);
+  }
+  .glow-neutral {
+    box-shadow: 0 0 20px hsl(var(--neutral) / 0.3), 0 0 60px hsl(var(--neutral) / 0.1);
+  }
+  .glow-gold {
+    box-shadow: 0 0 20px hsl(var(--primary) / 0.3), 0 0 60px hsl(var(--primary) / 0.1);
+  }
+
+  .bg-night-gradient {
+    background: linear-gradient(180deg, hsl(var(--night-sky)) 0%, hsl(var(--night-mid)) 50%, hsl(var(--night-surface)) 100%);
+  }
+
+  .bg-moonlit {
+    background: radial-gradient(ellipse at 50% 0%, hsl(var(--moon) / 0.08) 0%, transparent 60%);
+  }
+
+  .card-tarot {
+    @apply relative rounded-xl overflow-hidden;
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(230 28% 14%) 100%);
+    border: 1px solid hsl(var(--border));
+  }
+  .card-tarot::before {
+    content: '';
+    @apply absolute inset-0 rounded-xl;
+    border: 1px solid hsl(var(--primary) / 0.15);
+    pointer-events: none;
+  }
+
+  .card-tarot-wolf {
+    border-color: hsl(var(--wolf) / 0.4);
+  }
+  .card-tarot-wolf::before {
+    border-color: hsl(var(--wolf) / 0.2);
+  }
+  .card-tarot-villager {
+    border-color: hsl(var(--villager) / 0.4);
+  }
+  .card-tarot-villager::before {
+    border-color: hsl(var(--villager) / 0.2);
+  }
+  .card-tarot-neutral {
+    border-color: hsl(var(--neutral) / 0.4);
+  }
+  .card-tarot-neutral::before {
+    border-color: hsl(var(--neutral) / 0.2);
+  }
+
+  .shimmer {
+    background: linear-gradient(
+      110deg,
+      transparent 25%,
+      hsl(var(--primary) / 0.08) 37%,
+      transparent 63%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 3s ease-in-out infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
   }
 }
