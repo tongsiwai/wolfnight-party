@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useReducer } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useState } from 'react';
 import { Role, getRoleById } from '@/data/roles';
+import { toast } from 'sonner';
 
 export type GamePhase = 'lobby' | 'role-selection' | 'role-assignment' | 'night' | 'day' | 'victory';
 export type WinTeam = 'wolf' | 'villager' | 'neutral' | null;
@@ -22,16 +23,16 @@ export interface GameEvent {
 export interface GameState {
   phase: GamePhase;
   players: Player[];
-  selectedRoles: Record<string, number>; // roleId -> count
-  currentPlayerIndex: number; // for role assignment
+  selectedRoles: Record<string, number>;
+  currentPlayerIndex: number;
   round: number;
   nightStep: number;
   nightActions: NightAction[];
-  votes: Record<number, number>; // voterId -> targetId
+  votes: Record<number, number>;
   eliminatedLastNight: number[];
   events: GameEvent[];
   winner: WinTeam;
-  discussionTime: number; // seconds
+  discussionTime: number;
   lastGuardedPlayerId: number | null;
   usedHealPotion: boolean;
   usedPoisonPotion: boolean;
@@ -47,7 +48,7 @@ export interface NightAction {
 type Action =
   | { type: 'SET_PHASE'; phase: GamePhase }
   | { type: 'SET_PLAYERS'; players: Player[] }
-  | { type: 'ADD_PLAYER'; name: string }
+  | { type: 'ADD_PLAYER'; name: string; id?: number }
   | { type: 'REMOVE_PLAYER'; id: number }
   | { type: 'SET_SELECTED_ROLES'; roles: Record<string, number> }
   | { type: 'INCREMENT_ROLE'; roleId: string }
@@ -63,9 +64,10 @@ type Action =
   | { type: 'ADD_EVENT'; event: GameEvent }
   | { type: 'CHECK_VICTORY' }
   | { type: 'NEXT_ROUND' }
-  | { type: 'RESET_GAME' }
   | { type: 'SET_DISCUSSION_TIME'; time: number }
-  | { type: 'LOAD_TEMPLATE'; roles: Record<string, number> };
+  | { type: 'LOAD_TEMPLATE'; roles: Record<string, number> }
+  | { type: 'RESET_GAME' }
+  | { type: 'SYNC_STATE'; state: GameState }; // Used for receiving state from Host
 
 const initialState: GameState = {
   phase: 'lobby',
@@ -106,12 +108,15 @@ function checkVictory(players: Player[]): WinTeam {
 
 function gameReducer(state: GameState, action: Action): GameState {
   switch (action.type) {
+    case 'SYNC_STATE':
+      return action.state;
     case 'SET_PHASE':
       return { ...state, phase: action.phase };
     case 'SET_PLAYERS':
       return { ...state, players: action.players };
     case 'ADD_PLAYER': {
-      const id = state.players.length > 0 ? Math.max(...state.players.map(p => p.id)) + 1 : 1;
+      const id = action.id || (state.players.length > 0 ? Math.max(...state.players.map(p => p.id)) + 1 : 1);
+      if (state.players.find(p => p.id === id)) return state; // Prevent duplicates
       return { ...state, players: [...state.players, { id, name: action.name, alive: true, hasVotingRights: true }] };
     }
     case 'REMOVE_PLAYER':
@@ -152,7 +157,6 @@ function gameReducer(state: GameState, action: Action): GameState {
         }
       }
       
-      // Fallback if UI somehow passes fewer roles than players
       missingRoles = state.players.length - roleList.length;
       if (missingRoles > 0) {
         const villager = getRoleById('villager')!;
@@ -167,7 +171,8 @@ function gameReducer(state: GameState, action: Action): GameState {
         hasVotingRights: true,
         votedOut: false,
       }));
-      return { ...state, players, currentPlayerIndex: 0, phase: 'role-assignment' };
+      // Auto-skip 'role-assignment' step since phones have their own views now
+      return { ...state, players, currentPlayerIndex: 0, phase: 'night', round: 1, events: [] };
     }
     case 'NEXT_PLAYER':
       return { ...state, currentPlayerIndex: state.currentPlayerIndex + 1 };
@@ -255,7 +260,6 @@ function gameReducer(state: GameState, action: Action): GameState {
       if (eliminatedId !== null && !tie) {
         const targetPlayer = players.find(p => p.id === eliminatedId);
         if (targetPlayer?.role?.id === 'idiot') {
-          // Idiot survives but loses voting rights
           players = players.map(p => p.id === eliminatedId ? { ...p, hasVotingRights: false } : p);
           events.push({ phase: 'day', round: state.round, description: `${targetPlayer.name} was voted out, but revealed as the Idiot and survived (lost voting rights).` });
         } else {
@@ -291,7 +295,7 @@ function gameReducer(state: GameState, action: Action): GameState {
       return {
         ...initialState,
         players: state.players.map(p => ({ ...p, role: undefined, alive: true, votedOut: false, hasVotingRights: true })),
-        selectedRoles: state.selectedRoles, // Retain roles for quick restart
+        selectedRoles: state.selectedRoles,
       };
     default:
       return state;
@@ -301,15 +305,92 @@ function gameReducer(state: GameState, action: Action): GameState {
 interface GameContextType {
   state: GameState;
   dispatch: React.Dispatch<Action>;
+  isHost: boolean;
+  roomCode: string | null;
+  myPlayerId: number | null;
+  createRoom: () => void;
+  joinRoom: (code: string, name: string) => void;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(gameReducer, initialState);
+  const [state, dispatchRaw] = useReducer(gameReducer, initialState);
+  const [isHost, setIsHost] = useState(false);
+  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [myPlayerId, setMyPlayerId] = useState<number | null>(null);
+  const [channel, setChannel] = useState<BroadcastChannel | null>(null);
+
+  // Broadcast any state change if we are the host
+  const dispatch = (action: Action) => {
+    dispatchRaw(action);
+    // After dispatching, the effect below will broadcast the new state
+  };
+
+  useEffect(() => {
+    if (isHost && channel) {
+      channel.postMessage({ type: 'STATE_UPDATE', state });
+    }
+  }, [state, isHost, channel]);
+
+  useEffect(() => {
+    if (roomCode) {
+      const bc = new BroadcastChannel(`wolfnight_${roomCode}`);
+      setChannel(bc);
+
+      bc.onmessage = (event) => {
+        const data = event.data;
+        if (isHost) {
+          // Host listens for players joining
+          if (data.type === 'PLAYER_JOIN') {
+            const newId = Date.now();
+            dispatchRaw({ type: 'ADD_PLAYER', name: data.name, id: newId });
+            bc.postMessage({ type: 'PLAYER_ACCEPTED', name: data.name, id: newId });
+            toast(`${data.name} joined the room!`);
+          }
+        } else {
+          // Players listen for state updates and acceptance
+          if (data.type === 'STATE_UPDATE') {
+            dispatchRaw({ type: 'SYNC_STATE', state: data.state });
+          } else if (data.type === 'PLAYER_ACCEPTED' && !myPlayerId) {
+            // Check if this acceptance is for me (using name as temporary identifier for simplicity)
+            // In a real app with Supabase, we would use proper auth or localstorage session IDs
+            const pendingName = sessionStorage.getItem('pendingName');
+            if (data.name === pendingName) {
+              setMyPlayerId(data.id);
+              sessionStorage.removeItem('pendingName');
+              toast.success('Successfully joined the room!');
+            }
+          }
+        }
+      };
+
+      return () => {
+        bc.close();
+      };
+    }
+  }, [roomCode, isHost, myPlayerId]);
+
+  const createRoom = () => {
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    setIsHost(true);
+    setRoomCode(code);
+    dispatchRaw({ type: 'SET_PHASE', phase: 'lobby' });
+  };
+
+  const joinRoom = (code: string, name: string) => {
+    setIsHost(false);
+    setRoomCode(code.toUpperCase());
+    sessionStorage.setItem('pendingName', name);
+    // Send join request
+    const bc = new BroadcastChannel(`wolfnight_${code.toUpperCase()}`);
+    bc.postMessage({ type: 'PLAYER_JOIN', name });
+    // Keep channel open to receive acceptance
+    setChannel(bc);
+  };
 
   return (
-    <GameContext.Provider value={{ state, dispatch }}>
+    <GameContext.Provider value={{ state, dispatch, isHost, roomCode, myPlayerId, createRoom, joinRoom }}>
       {children}
     </GameContext.Provider>
   );
