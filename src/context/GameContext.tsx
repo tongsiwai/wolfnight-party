@@ -59,7 +59,7 @@ type Action =
   | { type: 'RESOLVE_NIGHT' }
   | { type: 'CAST_VOTE'; voterId: number; targetId: number }
   | { type: 'RESOLVE_VOTES' }
-  | { type: 'ELIMINATE_PLAYER'; playerId: number; method: 'vote' | 'night' | 'shoot' }
+  | { type: 'ELIMINATE_PLAYER'; playerId: number }
   | { type: 'ADD_EVENT'; event: GameEvent }
   | { type: 'CHECK_VICTORY' }
   | { type: 'NEXT_ROUND' }
