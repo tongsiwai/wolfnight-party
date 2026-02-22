@@ -127,6 +127,7 @@ export default function NightPhase() {
 
     if (isLastStep) {
       dispatch({ type: 'RESOLVE_NIGHT' });
+      dispatch({ type: 'CHECK_VICTORY' });
       navigate('/day');
     } else {
       setCurrentStep(prev => prev + 1);
@@ -139,6 +140,7 @@ export default function NightPhase() {
     setWitchMode(null);
     if (isLastStep) {
       dispatch({ type: 'RESOLVE_NIGHT' });
+      dispatch({ type: 'CHECK_VICTORY' });
       navigate('/day');
     } else {
       setCurrentStep(prev => prev + 1);
@@ -157,47 +159,47 @@ export default function NightPhase() {
   });
 
   return (
-    <div className=\"min-h-screen bg-night-gradient flex flex-col\">
-      <header className=\"pt-6 pb-4 px-4 text-center\">
-        <div className=\"flex items-center justify-center gap-2 text-muted-foreground text-sm mb-1\">
-          <Moon className=\"w-4 h-4\" />
-          <span className=\"font-display\">第 {state.round} 夜</span>
+    <div className="min-h-screen bg-night-gradient flex flex-col">
+      <header className="pt-6 pb-4 px-4 text-center">
+        <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm mb-1">
+          <Moon className="w-4 h-4" />
+          <span className="font-display">第 {state.round} 夜</span>
         </div>
-        <div className=\"flex gap-1 max-w-xs mx-auto mt-2\">
+        <div className="flex gap-1 max-w-xs mx-auto mt-2">
           {nightSteps.map((_, i) => (
             <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= currentStep ? 'bg-primary' : 'bg-secondary'}`} />
           ))}
         </div>
       </header>
 
-      <div className=\"flex-1 flex flex-col items-center justify-center px-4\">
-        <AnimatePresence mode=\"wait\">
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
+        <AnimatePresence mode="wait">
           <motion.div
             key={currentStep + (seerResult ? '-result' : '')}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className=\"text-center w-full max-w-sm\"
+            className="text-center w-full max-w-sm"
           >
-            <span className=\"text-6xl block mb-4\">{step.emoji}</span>
-            <h2 className=\"text-2xl font-display font-bold text-foreground mb-2\">{step.title}</h2>
+            <span className="text-6xl block mb-4">{step.emoji}</span>
+            <h2 className="text-2xl font-display font-bold text-foreground mb-2">{step.title}</h2>
             
             {step.roleId === 'seer' && seerResult ? (
-              <div className=\"mt-8 p-6 rounded-2xl bg-primary/10 border border-primary/20 animate-in zoom-in duration-300\">
-                <p className=\"text-muted-foreground text-sm mb-2\">查驗結果：</p>
-                <p className=\"text-3xl font-display font-bold text-primary\">{seerResult}</p>
+              <div className="mt-8 p-6 rounded-2xl bg-primary/10 border border-primary/20 animate-in zoom-in duration-300">
+                <p className="text-muted-foreground text-sm mb-2">查驗結果：</p>
+                <p className="text-3xl font-display font-bold text-primary">{seerResult}</p>
               </div>
             ) : (
               <>
-                <p className=\"text-muted-foreground text-sm mb-6\">{step.instruction}</p>
+                <p className="text-muted-foreground text-sm mb-6">{step.instruction}</p>
                 
                 {step.roleId === 'witch' && !state.usedHealPotion && wolfKillName && (
-                  <div className=\"mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20\">
-                    <p className=\"text-sm text-destructive-foreground\">今晚被殺的是：<span className=\"font-bold\">{wolfKillName}</span></p>
+                  <div className="mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-destructive-foreground">今晚被殺的是：<span className="font-bold">{wolfKillName}</span></p>
                     <Button 
-                      variant=\"outline\" 
-                      size=\"sm\" 
-                      className=\"mt-2 bg-background/50\"
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-2 bg-background/50"
                       onClick={() => { setWitchMode('heal'); setSelectedTarget(wolfKillTargetId!); }}
                     >
                       使用解藥
@@ -206,7 +208,7 @@ export default function NightPhase() {
                 )}
 
                 {step.requiresTarget && (
-                  <div className=\"grid grid-cols-3 gap-2 mb-6\">
+                  <div className="grid grid-cols-3 gap-2 mb-6">
                     {selectablePlayers.map(p => (
                       <button
                         key={p.id}
@@ -231,12 +233,12 @@ export default function NightPhase() {
         </AnimatePresence>
       </div>
 
-      <div className=\"px-4 pb-8 max-w-sm mx-auto w-full space-y-2\">
-        <Button onClick={handleNext} className=\"w-full h-14 text-lg font-display gap-2\" size=\"lg\">
-          {seerResult ? '我知道了' : isLastStep ? '進入白天' : '下一步'} <ArrowRight className=\"w-5 h-5\" />
+      <div className="px-4 pb-8 max-w-sm mx-auto w-full space-y-2">
+        <Button onClick={handleNext} className="w-full h-14 text-lg font-display gap-2" size="lg">
+          {seerResult ? '我知道了' : isLastStep ? '進入白天' : '下一步'} <ArrowRight className="w-5 h-5" />
         </Button>
         {step.requiresTarget && !seerResult && (
-          <Button onClick={handleSkip} variant=\"ghost\" className=\"w-full text-muted-foreground\">
+          <Button onClick={handleSkip} variant="ghost" className="w-full text-muted-foreground">
             跳過此步驟
           </Button>
         )}
