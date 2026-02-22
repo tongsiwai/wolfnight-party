@@ -1,21 +1,17 @@
 import { initializeApp, getApps } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 
+// Firebase config is intentionally public — security is enforced via Firebase Database Rules
+// Reference: https://firebase.google.com/docs/projects/api-keys
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  apiKey: "AIzaSyCA0q_aWmV6cec_uJc6g5Wjl87SL9wrqGY",
+  authDomain: "wolfnight-party.firebaseapp.com",
+  databaseURL: "https://wolfnight-party-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "wolfnight-party",
+  storageBucket: "wolfnight-party.firebasestorage.app",
+  messagingSenderId: "199029020061",
+  appId: "1:199029020061:web:633f34b7191a2e68de4b74",
 };
-
-if (!import.meta.env.VITE_FIREBASE_DATABASE_URL) {
-  console.warn(
-    '[WolfNight] Firebase env vars not set.\n' +
-    'Add VITE_FIREBASE_API_KEY, VITE_FIREBASE_AUTH_DOMAIN, VITE_FIREBASE_DATABASE_URL, ' +
-    'VITE_FIREBASE_PROJECT_ID, and VITE_FIREBASE_APP_ID to your Lovable environment settings.'
-  );
-}
 
 // Prevent duplicate Firebase app initialization during Vite hot-reload
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
